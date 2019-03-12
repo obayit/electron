@@ -23,7 +23,7 @@
   SecPolicyRef sec_policy_;
 }
 
-- (id)initWithPromise:(const atom::util::CopyablePromise&)promise
+- (id)initWithPromise:(atom::util::Promise)promise
                 panel:(SFCertificateTrustPanel*)panel
                  cert:(const scoped_refptr<net::X509Certificate>&)cert
                 trust:(SecTrustRef)trust
@@ -47,14 +47,14 @@
   [super dealloc];
 }
 
-- (id)initWithPromise:(const atom::util::CopyablePromise&)promise
+- (id)initWithPromise:(atom::util::Promise)promise
                 panel:(SFCertificateTrustPanel*)panel
                  cert:(const scoped_refptr<net::X509Certificate>&)cert
                 trust:(SecTrustRef)trust
             certChain:(CFArrayRef)certChain
             secPolicy:(SecPolicyRef)secPolicy {
   if ((self = [super init])) {
-    promise_.reset(new atom::util::Promise(promise.GetPromise()));
+    promise_.reset(new atom::util::Promise(std::move(promise)));
     panel_ = panel;
     cert_ = cert;
     trust_ = trust;
@@ -101,13 +101,12 @@ v8::Local<v8::Promise> ShowCertificateTrust(
   auto msg = base::SysUTF8ToNSString(message);
 
   auto panel = [[SFCertificateTrustPanel alloc] init];
-  auto delegate = [[TrustDelegate alloc]
-      initWithPromise:atom::util::CopyablePromise(promise)
-                panel:panel
-                 cert:cert
-                trust:trust
-            certChain:cert_chain
-            secPolicy:sec_policy];
+  auto delegate = [[TrustDelegate alloc] initWithPromise:std::move(promise)
+                                                   panel:panel
+                                                    cert:cert
+                                                   trust:trust
+                                               certChain:cert_chain
+                                               secPolicy:sec_policy];
   [panel beginSheetForWindow:window
                modalDelegate:delegate
               didEndSelector:@selector(panelDidEnd:returnCode:contextInfo:)
